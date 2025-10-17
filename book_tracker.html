@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Book Tracker — School Bag</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --accent:#6c8ef5;
+      --muted:#6b7280;
+      --card-accent:#eef3ff;
+      --shadow: 0 6px 18px rgba(17,24,39,0.06);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#fff);min-height:100vh;color:#111827}
+    .wrap{max-width:920px;margin:36px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:6px 0 0;color:var(--muted);font-size:13px}
+
+    .controls{display:flex;gap:8px;align-items:center}
+    button{background:var(--accent);border:0;color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;box-shadow:var(--shadow);font-weight:600}
+    button.ghost{background:transparent;color:var(--accent);box-shadow:none;border:1px solid rgba(108,142,245,0.15)}
+    button.small{padding:6px 8px;font-size:13px;border-radius:8px}
+
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    @media (max-width:780px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:520px){.grid{grid-template-columns:1fr}}
+
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:var(--shadow);min-height:120px;position:relative}
+    .day{display:flex;align-items:center;gap:8px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .dot.monday{background:#ffd8d8}
+    .dot.tuesday{background:#e6e6ff}
+    .dot.wednesday{background:#dff7e6}
+    .dot.thursday{background:#fff1d6}
+    .dot.friday{background:#f1e7ff}
+
+    .day h3{margin:0;font-size:15px}
+    ul.books{padding:8px 0 0 18px;margin:0;color:#111827}
+    ul.books li{margin:6px 0;font-size:14px}
+
+    .edit-area{display:none;margin-top:10px}
+    .edit-area textarea{width:100%;min-height:80px;border-radius:8px;border:1px solid #e6e9ef;padding:10px;font-family:inherit}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+
+    .top-note{font-size:12px;color:var(--muted);margin-left:6px}
+
+    .smalllink{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:13px;text-decoration:underline;padding:4px}
+    .savedpill{background:rgba(99,102,241,0.12);color:var(--accent);padding:6px 10px;border-radius:999px;font-weight:600;display:inline-block}
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Book Tracker</h1>
+        <p class="lead">What to put in your bag each day — quick and simple.</p>
+      </div>
+      <div class="controls">
+        <div id="status" class="top-note">Read-only</div>
+        <button id="editBtn" class="small">Edit</button>
+        <button id="resetBtn" class="ghost small">Reset</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="grid" id="cards"></section>
+    </main>
+
+    <footer>
+      <div>Tip: Click <span class="savedpill">Edit</span> to change lists. Changes are saved in your browser (localStorage).</div>
+    </footer>
+  </div>
+
+<script>
+// default schedule from your input
+const defaultData = {
+  Monday: ["Spanish (Hortelano)"],
+  Tuesday: ["Spanish (Hortelano)", "Spanish (Català)", "Science", "German"],
+  Wednesday: ["Science", "Spanish (Hortelano)"],
+  Thursday: ["Science", "Spanish (Català)", "Art"],
+  Friday: ["Spanish (Hortelano)", "French"]
+};
+
+const STORAGE_KEY = 'bookTrackerData_v1';
+let data = loadData();
+let editMode = false;
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return {...defaultData};
+    return JSON.parse(raw);
+  }catch(e){
+    console.error('Failed to read localStorage', e);
+    return {...defaultData};
+  }
+}
+
+function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    showSavedToast();
+  }catch(e){console.error('save error', e)}
+}
+
+function resetData(){
+  if(confirm('Reset to the original schedule? This will overwrite your saved changes.')){
+    data = {...defaultData};
+    saveData();
+    render();
+  }
+}
+
+function showSavedToast(){
+  const st = document.getElementById('status');
+  st.textContent = 'Saved';
+  setTimeout(()=>{ if(!editMode) st.textContent = 'Read-only'; }, 1200);
+}
+
+function render(){
+  const container = document.getElementById('cards');
+  container.innerHTML = '';
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+  days.forEach((day, idx)=>{
+    const card = document.createElement('article');
+    card.className = 'card';
+
+    const dot = document.createElement('span');
+    dot.className = 'dot ' + day.toLowerCase();
+
+    const header = document.createElement('div');
+    header.className = 'day';
+    const h = document.createElement('h3');
+    h.textContent = day;
+    header.appendChild(dot);
+    header.appendChild(h);
+
+    card.appendChild(header);
+
+    // list area
+    const ul = document.createElement('ul');
+    ul.className = 'books';
+
+    (data[day] || []).forEach(it=>{
+      const li = document.createElement('li');
+      li.textContent = it;
+      ul.appendChild(li);
+    });
+
+    card.appendChild(ul);
+
+    // edit area (hidden unless editMode)
+    const edit = document.createElement('div');
+    edit.className = 'edit-area';
+    const ta = document.createElement('textarea');
+    ta.placeholder = 'One book per line';
+    ta.value = (data[day]||[]).join('\n');
+    edit.appendChild(ta);
+    const hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.textContent = 'Enter one subject or book per line. Press Save when finished.';
+    edit.appendChild(hint);
+
+    card.appendChild(edit);
+
+    // show Save/Cancel buttons in edit mode
+    const btnBar = document.createElement('div');
+    btnBar.style.marginTop = '10px';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.className = 'small';
+    saveBtn.addEventListener('click', ()=>{
+      const lines = ta.value.split('\n').map(s=>s.trim()).filter(Boolean);
+      data[day] = lines;
+      saveData();
+      toggleEdit(false);
+      render();
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'ghost small';
+    cancelBtn.addEventListener('click', ()=>{ toggleEdit(false); render(); });
+
+    btnBar.appendChild(saveBtn);
+    btnBar.appendChild(cancelBtn);
+    edit.appendChild(btnBar);
+
+    container.appendChild(card);
+  });
+
+  updateEditUI();
+}
+
+function updateEditUI(){
+  document.querySelectorAll('.edit-area').forEach(el=>{
+    el.style.display = editMode ? 'block' : 'none';
+  });
+  document.getElementById('editBtn').textContent = editMode ? 'Close' : 'Edit';
+  document.getElementById('status').textContent = editMode ? 'Editing' : 'Read-only';
+}
+
+function toggleEdit(force){
+  if(typeof force === 'boolean') editMode = force;
+  else editMode = !editMode;
+  updateEditUI();
+}
+
+// hook buttons
+document.getElementById('editBtn').addEventListener('click', ()=>{
+  toggleEdit();
+});
+
+document.getElementById('resetBtn').addEventListener('click', resetData);
+
+// initial render
+render();
+</script>
+</body>
+</html>
