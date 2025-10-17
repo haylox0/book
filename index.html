@@ -19,7 +19,6 @@
     .wrap{max-width:920px;margin:36px auto;padding:20px}
     header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
     h1{font-size:20px;margin:0}
-    p.lead{margin:6px 0 0;color:var(--muted);font-size:13px}
 
     .controls{display:flex;gap:8px;align-items:center}
     button{background:var(--accent);border:0;color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;box-shadow:var(--shadow);font-weight:600}
@@ -72,14 +71,10 @@
     <main>
       <section class="grid" id="cards"></section>
     </main>
-
-    <footer>
-Changes are saved in your browser (localStorage).</div>
-    </footer>
   </div>
 
 <script>
-// default schedule from your input
+// default schedule (all N/A)
 const defaultData = {
   Monday: ["N/A"],
   Tuesday: ["N/A"],
@@ -128,7 +123,7 @@ function render(){
   const container = document.getElementById('cards');
   container.innerHTML = '';
   const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
-  days.forEach((day, idx)=>{
+  days.forEach((day)=>{
     const card = document.createElement('article');
     card.className = 'card';
 
@@ -144,7 +139,6 @@ function render(){
 
     card.appendChild(header);
 
-    // list area
     const ul = document.createElement('ul');
     ul.className = 'books';
 
@@ -156,7 +150,6 @@ function render(){
 
     card.appendChild(ul);
 
-    // edit area (hidden unless editMode)
     const edit = document.createElement('div');
     edit.className = 'edit-area';
     const ta = document.createElement('textarea');
@@ -170,7 +163,6 @@ function render(){
 
     card.appendChild(edit);
 
-    // show Save/Cancel buttons in edit mode
     const btnBar = document.createElement('div');
     btnBar.style.marginTop = '10px';
 
@@ -214,14 +206,12 @@ function toggleEdit(force){
   updateEditUI();
 }
 
-// hook buttons
 document.getElementById('editBtn').addEventListener('click', ()=>{
   toggleEdit();
 });
 
 document.getElementById('resetBtn').addEventListener('click', resetData);
 
-// initial render
 render();
 </script>
 </body>
